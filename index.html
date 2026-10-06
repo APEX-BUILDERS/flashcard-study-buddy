@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flashcard StudyBuddy</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1117;
+      --panel: #151b23;
+      --panel-soft: #1d2633;
+      --text: #f5f7fb;
+      --muted: #9aa8bd;
+      --line: #2b3545;
+      --accent: #2dd4bf;
+      --accent-strong: #14b8a6;
+      --danger: #fb7185;
+      --warning: #fbbf24;
+      --success: #34d399;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(45, 212, 191, 0.18), transparent 34rem),
+        linear-gradient(135deg, #090d13 0%, var(--bg) 48%, #121923 100%);
+      display: grid;
+      place-items: center;
+      padding: 28px 16px;
+    }
+
+    main {
+      width: min(940px, 100%);
+    }
+
+    .app-shell {
+      width: 100%;
+      background: rgba(21, 27, 35, 0.9);
+      border: 1px solid rgba(154, 168, 189, 0.16);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(16px);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px clamp(18px, 4vw, 34px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(1.55rem, 4vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .tagline {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+
+    .mode-pill {
+      flex: 0 0 auto;
+      color: #09221f;
+      background: var(--accent);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .screen {
+      display: none;
+      padding: clamp(18px, 4vw, 34px);
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .input-area {
+      display: grid;
+      gap: 18px;
+    }
+
+    label {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 330px;
+      resize: vertical;
+      padding: 18px;
+      color: var(--text);
+      background: #0f141d;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      font: 1rem/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      outline: none;
+      transition: border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    textarea:focus {
+      border-color: rgba(45, 212, 191, 0.78);
+      box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.12);
+    }
+
+    .hint {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.94rem;
+    }
+
+    .error {
+      display: none;
+      color: #ffd8de;
+      background: rgba(251, 113, 133, 0.14);
+      border: 1px solid rgba(251, 113, 133, 0.45);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      line-height: 1.45;
+    }
+
+    .error.visible {
+      display: block;
+    }
+
+    .study-top {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .study-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #0f141d;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #60a5fa);
+      transition: width 240ms ease;
+    }
+
+    .card-stage {
+      perspective: 1400px;
+      margin: 0 auto 24px;
+      max-width: 760px;
+    }
+
+    .flashcard {
+      position: relative;
+      width: 100%;
+      min-height: clamp(270px, 45vh, 420px);
+      border: 0;
+      padding: 0;
+      color: inherit;
+      background: transparent;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .flashcard:focus-visible .card-face {
+      box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.24), 0 20px 70px rgba(0, 0, 0, 0.28);
+    }
+
+    .card-inner {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      transition: transform 560ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+
+    .flashcard.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: clamp(22px, 6vw, 48px);
+      border: 1px solid rgba(154, 168, 189, 0.2);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(145deg, rgba(29, 38, 51, 0.96), rgba(16, 22, 31, 0.96)),
+        var(--panel-soft);
+      backface-visibility: hidden;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.28);
+    }
+
+    .card-face.back {
+      transform: rotateY(180deg);
+      background:
+        linear-gradient(145deg, rgba(20, 184, 166, 0.2), rgba(29, 38, 51, 0.98)),
+        var(--panel-soft);
+    }
+
+    .card-content {
+      display: grid;
+      gap: 14px;
+      text-align: center;
+      max-width: 620px;
+    }
+
+    .card-label {
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .card-text {
+      overflow-wrap: anywhere;
+      font-size: clamp(1.45rem, 4vw, 2.35rem);
+      line-height: 1.22;
+      font-weight: 800;
+    }
+
+    .card-subtext {
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    button {
+      min-height: 44px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      padding: 11px 16px;
+      color: var(--text);
+      background: var(--panel-soft);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      border-color: rgba(154, 168, 189, 0.34);
+      background: #243044;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:focus-visible {
+      outline: 3px solid rgba(45, 212, 191, 0.45);
+      outline-offset: 3px;
+    }
+
+    .primary {
+      color: #07201d;
+      background: var(--accent);
+    }
+
+    .primary:hover {
+      background: #5eead4;
+    }
+
+    .success {
+      color: #062016;
+      background: var(--success);
+    }
+
+    .success:hover {
+      background: #6ee7b7;
+    }
+
+    .danger {
+      color: #2f0710;
+      background: var(--danger);
+    }
+
+    .danger:hover {
+      background: #fda4af;
+    }
+
+    .ghost {
+      border-color: var(--line);
+      background: transparent;
+    }
+
+    .results-panel {
+      display: grid;
+      gap: 22px;
+      text-align: center;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    .score-card {
+      display: grid;
+      gap: 12px;
+      padding: clamp(22px, 5vw, 34px);
+      border: 1px solid rgba(154, 168, 189, 0.18);
+      border-radius: var(--radius);
+      background: #101720;
+    }
+
+    .score-value {
+      font-size: clamp(3rem, 12vw, 5.5rem);
+      line-height: 1;
+      font-weight: 900;
+      color: var(--accent);
+    }
+
+    .score-copy {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stat {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(29, 38, 51, 0.58);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.4rem;
+      margin-bottom: 4px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 14px;
+      }
+
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .mode-pill {
+        align-self: flex-start;
+      }
+
+      textarea {
+        min-height: 300px;
+      }
+
+      .study-meta {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .button-row {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="app-shell" aria-live="polite">
+      <header>
+        <div>
+          <h1>Flashcard StudyBuddy</h1>
+          <p class="tagline">Paste notes, flip through cards, and retry only what needs another pass.</p>
+        </div>
+        <div class="mode-pill" id="modePill">New Deck</div>
+      </header>
+
+      <section class="screen active" id="setupScreen">
+        <div class="input-area">
+          <label for="notesInput">One flashcard per line using question-answer</label>
+          <textarea id="notesInput" spellcheck="false">What is photosynthesis?-The process plants use to turn light, water, and carbon dioxide into sugar and oxygen.
+What is the capital of Japan?-Tokyo.
+What does HTML stand for?-HyperText Markup Language.</textarea>
+          <p class="hint">Use a hyphen between each question and answer. Lines without both sides are skipped.</p>
+          <div class="error" id="errorMessage">Add at least one valid card in the format question-answer.</div>
+          <div class="button-row">
+            <button class="primary" id="startButton" type="button">Start Studying</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="studyScreen">
+        <div class="study-top">
+          <div class="study-meta">
+            <span id="progressCounter">Card 1 of 1</span>
+            <span id="shortcutHint">Space flips • Arrow keys move</span>
+          </div>
+          <div class="progress-track" aria-label="Study progress">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+
+        <div class="card-stage">
+          <button class="flashcard" id="flashcard" type="button" aria-label="Flip flashcard">
+            <span class="card-inner">
+              <span class="card-face front">
+                <span class="card-content">
+                  <span class="card-label">Question</span>
+                  <span class="card-text" id="questionText"></span>
+                  <span class="card-subtext">Click or press Space to reveal the answer.</span>
+                </span>
+              </span>
+              <span class="card-face back">
+                <span class="card-content">
+                  <span class="card-label">Answer</span>
+                  <span class="card-text" id="answerText"></span>
+                  <span class="card-subtext">Mark it before moving on.</span>
+                </span>
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <div class="button-row" aria-label="Card navigation">
+          <button class="ghost" id="previousButton" type="button">Previous</button>
+          <button class="ghost" id="nextButton" type="button">Next</button>
+          <button class="ghost" id="shuffleButton" type="button">Shuffle</button>
+        </div>
+
+        <div class="button-row" aria-label="Answer tracking" style="margin-top: 14px;">
+          <button class="success" id="gotItButton" type="button">Got It</button>
+          <button class="danger" id="reviewButton" type="button">Review Again</button>
+        </div>
+      </section>
+
+      <section class="screen" id="resultsScreen">
+        <div class="results-panel">
+          <div class="score-card">
+            <h2>Study Results</h2>
+            <div class="score-value" id="percentageText">0%</div>
+            <p class="score-copy" id="scoreText">You got 0 out of 0 cards.</p>
+            <div class="stat-grid">
+              <div class="stat">
+                <strong id="correctStat">0</strong>
+                <span>Got It</span>
+              </div>
+              <div class="stat">
+                <strong id="missedStat">0</strong>
+                <span>Review Again</span>
+              </div>
+              <div class="stat">
+                <strong id="totalStat">0</strong>
+                <span>Total Cards</span>
+              </div>
+            </div>
+          </div>
+          <div class="button-row">
+            <button class="primary" id="retryButton" type="button">Retry Missed Cards</button>
+            <button class="ghost" id="newDeckButton" type="button">New Deck</button>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const setupScreen = document.getElementById("setupScreen");
+    const studyScreen = document.getElementById("studyScreen");
+    const resultsScreen = document.getElementById("resultsScreen");
+    const notesInput = document.getElementById("notesInput");
+    const errorMessage = document.getElementById("errorMessage");
+    const startButton = document.getElementById("startButton");
+    const flashcard = document.getElementById("flashcard");
+    const questionText = document.getElementById("questionText");
+    const answerText = document.getElementById("answerText");
+    const progressCounter = document.getElementById("progressCounter");
+    const progressFill = document.getElementById("progressFill");
+    const previousButton = document.getElementById("previousButton");
+    const nextButton = document.getElementById("nextButton");
+    const shuffleButton = document.getElementById("shuffleButton");
+    const gotItButton = document.getElementById("gotItButton");
+    const reviewButton = document.getElementById("reviewButton");
+    const retryButton = document.getElementById("retryButton");
+    const newDeckButton = document.getElementById("newDeckButton");
+    const percentageText = document.getElementById("percentageText");
+    const scoreText = document.getElementById("scoreText");
+    const correctStat = document.getElementById("correctStat");
+    const missedStat = document.getElementById("missedStat");
+    const totalStat = document.getElementById("totalStat");
+    const modePill = document.getElementById("modePill");
+
+    let cards = [];
+    let currentIndex = 0;
+    let answers = new Map();
+
+    function parseCards(rawNotes) {
+      return rawNotes
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line, index) => {
+          const separatorIndex = line.indexOf("-");
+
+          if (separatorIndex === -1) {
+            return null;
+          }
+
+          const question = line.slice(0, separatorIndex).trim();
+          const answer = line.slice(separatorIndex + 1).trim();
+
+          if (!question || !answer) {
+            return null;
+          }
+
+          return {
+            id: `${Date.now()}-${index}-${question}`,
+            question,
+            answer
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function showScreen(screenName) {
+      setupScreen.classList.toggle("active", screenName === "setup");
+      studyScreen.classList.toggle("active", screenName === "study");
+      resultsScreen.classList.toggle("active", screenName === "results");
+      modePill.textContent = screenName === "setup" ? "New Deck" : screenName === "study" ? "Studying" : "Results";
+    }
+
+    function startDeck(nextCards) {
+      cards = nextCards;
+      currentIndex = 0;
+      answers = new Map();
+      errorMessage.classList.remove("visible");
+      showScreen("study");
+      renderCard();
+    }
+
+    function renderCard() {
+      const currentCard = cards[currentIndex];
+
+      if (!currentCard) {
+        showResults();
+        return;
+      }
+
+      flashcard.classList.remove("flipped");
+      questionText.textContent = currentCard.question;
+      answerText.textContent = currentCard.answer;
+      progressCounter.textContent = `Card ${currentIndex + 1} of ${cards.length}`;
+      progressFill.style.width = `${((currentIndex + 1) / cards.length) * 100}%`;
+      previousButton.disabled = currentIndex === 0;
+      nextButton.textContent = currentIndex === cards.length - 1 ? "Finish" : "Next";
+      flashcard.focus({ preventScroll: true });
+    }
+
+    function moveCard(direction) {
+      if (!cards.length) {
+        return;
+      }
+
+      if (direction < 0 && currentIndex > 0) {
+        currentIndex -= 1;
+        renderCard();
+        return;
+      }
+
+      if (direction > 0) {
+        if (currentIndex === cards.length - 1) {
+          showResults();
+        } else {
+          currentIndex += 1;
+          renderCard();
+        }
+      }
+    }
+
+    function recordAnswer(status) {
+      const currentCard = cards[currentIndex];
+
+      if (!currentCard) {
+        return;
+      }
+
+      answers.set(currentCard.id, status);
+
+      if (currentIndex === cards.length - 1) {
+        showResults();
+      } else {
+        currentIndex += 1;
+        renderCard();
+      }
+    }
+
+    function shuffleCards() {
+      for (let index = cards.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [cards[index], cards[swapIndex]] = [cards[swapIndex], cards[index]];
+      }
+
+      currentIndex = 0;
+      renderCard();
+    }
+
+    function showResults() {
+      const correctCount = cards.filter((card) => answers.get(card.id) === "got-it").length;
+      const missedCards = cards.filter((card) => answers.get(card.id) !== "got-it");
+      const totalCount = cards.length;
+      const percentage = totalCount ? Math.round((correctCount / totalCount) * 100) : 0;
+
+      percentageText.textContent = `${percentage}%`;
+      scoreText.textContent = `You got ${correctCount} out of ${totalCount} cards.`;
+      correctStat.textContent = correctCount;
+      missedStat.textContent = missedCards.length;
+      totalStat.textContent = totalCount;
+      retryButton.classList.toggle("hidden", missedCards.length === 0);
+      retryButton.dataset.missedIds = missedCards.map((card) => card.id).join("|");
+      showScreen("results");
+    }
+
+    startButton.addEventListener("click", () => {
+      const parsedCards = parseCards(notesInput.value);
+
+      if (!parsedCards.length) {
+        errorMessage.textContent = "No valid cards found. Try lines like: What is CSS?-A language for styling web pages.";
+        errorMessage.classList.add("visible");
+        notesInput.focus();
+        return;
+      }
+
+      startDeck(parsedCards);
+    });
+
+    flashcard.addEventListener("click", () => {
+      flashcard.classList.toggle("flipped");
+    });
+
+    previousButton.addEventListener("click", () => moveCard(-1));
+    nextButton.addEventListener("click", () => moveCard(1));
+    shuffleButton.addEventListener("click", shuffleCards);
+    gotItButton.addEventListener("click", () => recordAnswer("got-it"));
+    reviewButton.addEventListener("click", () => recordAnswer("review-again"));
+
+    retryButton.addEventListener("click", () => {
+      const missedIdSet = new Set(retryButton.dataset.missedIds.split("|").filter(Boolean));
+      const missedCards = cards.filter((card) => missedIdSet.has(card.id));
+
+      if (missedCards.length) {
+        startDeck(missedCards);
+      }
+    });
+
+    newDeckButton.addEventListener("click", () => {
+      showScreen("setup");
+      notesInput.focus();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (!studyScreen.classList.contains("active")) {
+        return;
+      }
+
+      if (event.target.matches("textarea, input")) {
+        return;
+      }
+
+      if (event.code === "Space") {
+        event.preventDefault();
+        flashcard.classList.toggle("flipped");
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        moveCard(-1);
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        moveCard(1);
+      }
+    });
+  </script>
+</body>
+</html>
